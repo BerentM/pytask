@@ -1,0 +1,8 @@
+.ropeproject/*
+venv/*
+tkinter_keys.txt
+tags
+PyTask/session.vim
+PyTask/frame_play.py
+PyTask/data/tasks.db
+PyTask/__pycache__/*
