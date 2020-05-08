@@ -12,17 +12,19 @@ PyTask is a todo.txt GUI, written in Python.
 :email: berentm@protonmail.com
 """
 
-__version__ = "0.1a"
+__version__ = "0.2a"
 
 import tkinter as tk
 from tkinter import ttk
 import PyTask.dbHelper as dbh
+from datetime import datetime
 
 
 class PyTask:
     def __init__(self, master):
         self.master = master
         self.focused_widget = self.master.focus_get()
+        self.default_values()
         self.draw(self.master)
 
     def root_config(self, root):
@@ -60,34 +62,38 @@ class PyTask:
                                                           sticky='NSEW')
 
         last_row += 1
-        self.ent_priority = tk.Entry(master, width=10)
+        self.ent_priority = tk.Entry(master, width=10, fg='gray')
         self.ent_priority.grid(row=last_row, column=0)
-        self.ent_priority.insert(0, "B")
+        self.ent_priority.insert(0, self.priority)
 
         self.ent_date = tk.Entry(master, width=10)
         self.ent_date.grid(row=last_row, column=1)
-        self.ent_date.focus_get()
+        self.ent_date.insert(0, self.today)
 
         self.ent_task = tk.Entry(master, width=100)
         self.ent_task.grid(row=last_row, column=2, columnspan=2)
-        self.ent_task.focus_get()
 
         last_row += 1
         self.btn_add = tk.Button(master, text="Dodaj", command=self.add_task)
         self.btn_add.grid(row=last_row, column=0, sticky='NWSE')
 
-        for i in range(1):
-            last_row += 1
-            tk.Label(master, text='').grid(row=last_row, column=0)
+        last_row += 1
+        tk.Label(master, text='').grid(row=last_row, column=0)
 
         last_row += 1
-        tk.Label(master, text="Twoja lista zadań").grid(row=last_row,
-                                                        columnspan=2,
-                                                        sticky='NSEW')
+        tk.Label(master, text="Lista zadań").grid(row=last_row, columnspan=2,
+                                                  sticky='NSEW')
 
         last_row += 1
         self.lbox_tasks = tk.Listbox(master)
-        self.lbox_tasks.grid(row=last_row, columnspan=2, sticky='NSEW')
+        self.lbox_tasks.grid(row=last_row, columnspan=4, sticky='NSEW')
+
+        last_row += 1
+        self.btn_add = tk.Button(master, text="Zmień", command=self.add_task)
+        self.btn_add.grid(row=last_row, column=0, sticky='NWSE')
+
+        self.btn_add = tk.Button(master, text="Usuń", command=self.add_task)
+        self.btn_add.grid(row=last_row, column=1, sticky='NWSE')
 
         # TODO ustawic cos co bedzie zwracalo krotke z 2 parametrami
         order_tuple = (0, 0)
@@ -115,7 +121,7 @@ class PyTask:
 
     def fill_task_listbox(self, order_tuple):
         """
-        Fill out task listbox.
+        Fill out task list box.
         """
         self.lbox_tasks.delete(0, tk.END)
         ordered_col, asc = order_tuple
@@ -124,23 +130,46 @@ class PyTask:
         for task in task_list:
             self.lbox_tasks.insert(tk.END, task)
 
-    def focus_widget(self, event):
+    def focus_widget(self, event, mouse=0, fnext=1):
         """
         Function switching focus between widgets.
-        Currently unnecessary.
+        ~~~~~~~~~
+        :mouse: param used to check if mouse was used to focus current widget
+        :fnext: param used to recognize keybinding Shift-Tab
         """
-        event.widget.tk_focusNext().focus()
+        if not mouse:
+            if fnext:
+                event.widget.tk_focusNext().focus()
+            else:
+                event.widget.tk_focusPrev().focus()
         focused_widget = self.master.focus_get()
-        self.modify_widget(focused_widget)
-
-    def modify_widget(self, focused_widget):
-        str_focused_widget = str(focused_widget)
         print(focused_widget)
-        print(type(focused_widget))
+        self.modify_focused_widget(focused_widget)
+
+    def modify_focused_widget(self, focused_widget):
+        """
+        Modifying currently focused widget.
+        """
+        if str(self.prev_entry) == '.!entry':
+            if not self.prev_entry.get():
+                self.prev_entry.insert(0, self.priority)
+        elif str(self.prev_entry) == '.!entry2':
+            if not self.prev_entry.get():
+                self.prev_entry.insert(0, self.today)
+
+        str_focused_widget = str(focused_widget)
         if str_focused_widget == '.!entry':
-            print('entry')
             focused_widget.delete(0, 'end')
-            focused_widget.insert(0, 'elo')
+            self.prev_entry = focused_widget
+        elif str_focused_widget == '.!entry2':
+            focused_widget.delete(0, 'end')
+            self.prev_entry = focused_widget
+        elif str_focused_widget == '.!entry3':
+            self.prev_entry = focused_widget
+            pass
+        elif str_focused_widget == '.!listbox':
+            lbox_selected = self.lbox_tasks.get(tk.ANCHOR)
+            print(lbox_selected)
 
     def keybindings(self):
         """
@@ -148,13 +177,25 @@ class PyTask:
         """
         self.master.bind_all("<Control-q>", lambda q: root.destroy())
         self.master.bind_all("<Control-m>", self.show_menu)
-        self.master.bind_all("<Button-1>", lambda e: self.focus_widget(e))
-        self.master.bind("<Tab>", self.focus_widget)
+        self.master.bind_all("<Button-1>", lambda x: self.focus_widget(x, 1))
+        self.master.bind("<Tab>", lambda x: self.focus_widget(x))
+        self.master.bind("<Shift-ISO_Left_Tab>",
+                         lambda x: self.focus_widget(x, 0, 0))
+        # self.master.bind("<Up>", lambda x: self.focus_widget(x, 0, 0))
+        # self.master.bind("<Down>", lambda x: self.focus_widget(x))
         # self.master.bind_all("<Control-1>", lambda c1: )
         # self.master.bind_all("<Control-2>", self.draw(self.master, 1, 0))
         self.master.bind("<a>", lambda a: self.ent_task.focus_set())
         self.ent_task.bind("<Return>", self.add_task)
         self.btn_add.bind("<Return>", self.add_task)
+
+    def default_values(self):
+        """
+        Init default variables.
+        """
+        self.priority = "B"
+        self.today = datetime.strftime(datetime.today(), '%Y-%m-%d')
+        self.prev_entry = None
 
 
 class ScrollableFrame(ttk.Frame):
