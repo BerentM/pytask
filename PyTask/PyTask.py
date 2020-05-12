@@ -87,6 +87,8 @@ class PyTask:
         last_row += 1
         self.lbox_tasks = tk.Listbox(master)
         self.lbox_tasks.grid(row=last_row, columnspan=4, sticky='NSEW')
+        # self.selection = 0
+        # self.lbox_tasks.select_set(self.selection)
 
         last_row += 1
         self.btn_add = tk.Button(master, text="Zmień", command=self.add_task)
@@ -143,7 +145,7 @@ class PyTask:
             else:
                 event.widget.tk_focusPrev().focus()
         focused_widget = self.master.focus_get()
-        print(focused_widget)
+        # print(focused_widget)
         self.modify_focused_widget(focused_widget)
 
     def modify_focused_widget(self, focused_widget):
@@ -168,8 +170,11 @@ class PyTask:
             self.prev_entry = focused_widget
             pass
         elif str_focused_widget == '.!listbox':
-            lbox_selected = self.lbox_tasks.get(tk.ANCHOR)
-            print(lbox_selected)
+            # keyboard support is based on function entry_selection
+            # mouse support
+            # self.lbox_selected = self.lbox_tasks.get(tk.ANCHOR)
+            # print(self.lbox_selected)
+            pass
 
     def keybindings(self):
         """
@@ -177,17 +182,14 @@ class PyTask:
         """
         self.master.bind_all("<Control-q>", lambda q: root.destroy())
         self.master.bind_all("<Control-m>", self.show_menu)
-        self.master.bind_all("<Button-1>", lambda x: self.focus_widget(x, 1))
+        self.master.bind("<Button-1>", lambda x: self.focus_widget(x, 1))
         self.master.bind("<Tab>", lambda x: self.focus_widget(x))
         self.master.bind("<Shift-ISO_Left_Tab>",
                          lambda x: self.focus_widget(x, 0, 0))
-        # self.master.bind("<Up>", lambda x: self.focus_widget(x, 0, 0))
-        # self.master.bind("<Down>", lambda x: self.focus_widget(x))
-        # self.master.bind_all("<Control-1>", lambda c1: )
-        # self.master.bind_all("<Control-2>", self.draw(self.master, 1, 0))
         self.master.bind("<a>", lambda a: self.ent_task.focus_set())
         self.ent_task.bind("<Return>", self.add_task)
         self.btn_add.bind("<Return>", self.add_task)
+        self.lbox_tasks.bind("<<ListboxSelect>>", self.entry_selection)
 
     def default_values(self):
         """
@@ -196,6 +198,19 @@ class PyTask:
         self.priority = "B"
         self.today = datetime.strftime(datetime.today(), '%Y-%m-%d')
         self.prev_entry = None
+
+    def entry_selection(self, event):
+        """
+        Listbox selection logic.
+        """
+        if self.lbox_tasks.curselection():
+            self.selection = self.lbox_tasks.curselection()[0]
+        else:
+            self.selection = 0
+        self.lbox_tasks.select_set(self.selection)
+        self.lbox_selected = self.lbox_tasks.selection_get()
+        print(self.selection)
+        print(self.lbox_selected)
 
 
 class ScrollableFrame(ttk.Frame):
